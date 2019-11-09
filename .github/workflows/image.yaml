@@ -1,0 +1,43 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    env:
+      docker_registry: docker.pkg.github.com/${{ github.repository }}
+      docker_image: riak
+      ref: ${{ github.ref }}
+      commit_sha: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+        with:
+          submodules: recursive
+
+      - name: Build Image
+        env:
+          docker_username: ${{ github.actor }}
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ref="${ref#refs/heads/}"
+          case "$ref" in
+          master) tag=latest;;
+          actions) tag=test;;
+          release/*) tag="${ref#release/}";;
+          *) exit 1;;
+          esac
+          docker build \
+            --label dev.nil.git.sha1="${commit_sha}" \
+            --label dev.nil.git.ref="${ref}" \
+            --tag "${docker_registry}/${docker_image}:${tag}" \
+            .
+          docker login "${docker_registry}" --username "$docker_username" --password-stdin <<<"$docker_password"
+          docker push "${docker_registry}/${docker_image}:${tag}"
