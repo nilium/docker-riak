@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - 'dev/**'
       - 'release/**'
 
 jobs:
@@ -11,8 +12,8 @@ jobs:
     runs-on: ubuntu-18.04
 
     env:
-      docker_registry: docker.pkg.github.com/${{ github.repository }}
-      docker_image: riak
+      docker_registry: '' # Defaults to index.docker.io
+      docker_image: nilium/riak
       ref: ${{ github.ref }}
       commit_sha: ${{ github.sha }}
 
@@ -22,22 +23,38 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build Image
-        env:
-          docker_username: ${{ github.actor }}
-          docker_password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Select Tag
         run: |
           ref="${ref#refs/heads/}"
           case "$ref" in
           master) tag=latest;;
           actions) tag=test;;
           release/*) tag="${ref#release/}";;
+          dev/*) tag="${ref#dev/}-latest";;
           *) exit 1;;
           esac
+          echo "${docker_registry:+${docker_registry}/}${docker_image}:${tag}" | tee .docker-image
+          echo "${docker_registry:+${docker_registry}/}${docker_image}:git-${commit_sha}" | tee .docker-image-sha
+
+      - name: Build Image
+        run: |
+          image="$(cat .docker-image)"
           docker build \
             --label dev.nil.git.sha1="${commit_sha}" \
             --label dev.nil.git.ref="${ref}" \
-            --tag "${docker_registry}/${docker_image}:${tag}" \
+            --tag "${image}" \
             .
-          docker login "${docker_registry}" --username "$docker_username" --password-stdin <<<"$docker_password"
-          docker push "${docker_registry}/${docker_image}:${tag}"
+          image_sha="$(cat .docker-image-sha)"
+          docker tag "${image}" "${image_sha}"
+
+      - name: Push Image
+        if: github.event_name == 'push'
+        env:
+          docker_username: ${{ secrets.dockerhub_username }}
+          docker_password: ${{ secrets.dockerhub_password }}
+        run: |
+          image="$(cat .docker-image)"
+          image_sha="$(cat .docker-image-sha)"
+          docker login ${docker_registry:+"${docker_registry}"} --username "$docker_username" --password-stdin <<<"$docker_password"
+          docker push "${image}"
+          docker push "${image_sha}"
