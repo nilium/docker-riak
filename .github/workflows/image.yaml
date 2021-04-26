@@ -3,7 +3,7 @@ name: Build Docker Image
 on:
   push:
     branches:
-      - master
+      - main
       - 'dev/**'
       - 'release/**'
 
@@ -27,7 +27,7 @@ jobs:
         run: |
           ref="${ref#refs/heads/}"
           case "$ref" in
-          master) tag=latest;;
+          main) tag=latest;;
           actions) tag=test;;
           release/*) tag="${ref#release/}";;
           dev/*) tag="${ref#dev/}-latest";;
