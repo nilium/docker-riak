@@ -5,7 +5,7 @@ touch /usr/local/riak/etc/riak.conf
 if [[ "$RIAK_SKIP_DOCKER_CONF" != 1 ]]; then
   echo >>/usr/local/riak/etc/riak.conf
   while read VAR KEY; do
-    if [[ -v "${VAR}" ]]; then
+    if [[ -v "${VAR}" ]] && [[ -n "${!VAR}" ]]; then
       echo "${KEY} = ${!VAR}"
     fi
   done </usr/local/riak/riak.conf.vars >>/usr/local/riak/etc/riak.conf
