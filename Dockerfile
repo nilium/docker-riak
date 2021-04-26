@@ -1,6 +1,6 @@
 ## stage0
 ## Build the Riak release.
-FROM ubuntu:xenial AS stage0
+FROM ubuntu:focal AS stage0
 
 # Add wget and build packages early so they're cached before sources or
 # arguments change. Git is required so that rebar can fetch
@@ -21,11 +21,11 @@ RUN apt-get install -yqq \
 ENV PATH=/build/bin:$PATH
 
 # Set Erlang version.
-ARG erlang_version=R16B03
+ARG erlang_version=22.3.4.17
 
 # Fetch Erlang via ADD instead of evm so that it can live in a cache
 # layer.
-ADD https://www.erlang.org/download/otp_src_${erlang_version}.tar.gz /root/.evm/erlang_tars/
+ADD https://github.com/erlang/otp/releases/download/OTP-${erlang_version}/otp_src_${erlang_version}.tar.gz /root/.evm/erlang_tars/
 
 # Copy riak, evm, and bin directories.
 WORKDIR /build
@@ -48,7 +48,7 @@ RUN in-evm make rel
 ## stage1
 ## Build a final image containing just the Riak release (including the
 ## Erlang runtime).
-FROM ubuntu:xenial AS stage1
+FROM ubuntu:focal AS stage1
 
 # Install runtime dependencies.
 RUN apt-get update -yq && \
@@ -70,7 +70,6 @@ RUN mkdir -p /var/lib/riak /var/log/riak
 COPY --from=stage0 /build/riak/rel/riak /usr/local/riak
 COPY riak/LICENSE /usr/local/riak/LICENSE
 COPY service /var/service
-COPY riak.conf /usr/local/riak/etc/
 COPY advanced.config /usr/local/riak/etc/
 COPY riak.conf.vars /usr/local/riak/
 COPY docker-entrypoint.sh /
@@ -85,6 +84,11 @@ EXPOSE 9080/tcp 8098/tcp 8087/tcp 4369/tcp 8099/tcp
 
 # Set working directory to the release.
 WORKDIR /usr/local/riak
+
+# Default configuration vars for node name and cookie.
+ENV \
+    RIAK_NODENAME="riak@127.0.0.1" \
+    RIAK_DISTRIBUTED_COOKIE="riak"
 
 # Set stop signal and entrypoint.
 STOPSIGNAL TERM

@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /usr/local/riak/bin/riak console
+exec /usr/local/riak/bin/riak foreground

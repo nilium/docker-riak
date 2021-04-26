@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-18.04
 
     env:
-      docker_registry: '' # Defaults to index.docker.io
+      docker_registry: ghcr.io
       docker_image: nilium/riak
       ref: ${{ github.ref }}
       commit_sha: ${{ github.sha }}
@@ -50,11 +50,10 @@ jobs:
       - name: Push Image
         if: github.event_name == 'push'
         env:
-          docker_username: ${{ secrets.dockerhub_username }}
-          docker_password: ${{ secrets.dockerhub_password }}
+          docker_password: ${{ secrets.GITHUB_TOKEN }}
         run: |
           image="$(cat .docker-image)"
           image_sha="$(cat .docker-image-sha)"
-          docker login ${docker_registry:+"${docker_registry}"} --username "$docker_username" --password-stdin <<<"$docker_password"
+          docker login ${docker_registry:+"${docker_registry}"} --username "$GITHUB_ACTOR" --password-stdin <<<"$docker_password"
           docker push "${image}"
           docker push "${image_sha}"
