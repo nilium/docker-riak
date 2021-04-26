@@ -1,5 +1,5 @@
 DOCKER := docker
-DOCKER_REGISTRY := index.docker.io/kochava
+DOCKER_REGISTRY ?= ghcr.io/nilium
 DOCKER_IMAGE := riak
 DOCKER_TAG := latest
 
